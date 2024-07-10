@@ -1,11 +1,12 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:laporan_masyarakat/config.dart';
-import 'package:laporan_masyarakat/dashboard/dashboard.dart';
+import 'package:laporan_masyarakat/dashboard/User/dashboard.dart';
 
 // ignore: camel_case_types
 class loginScreen extends StatefulWidget {
@@ -37,7 +38,7 @@ class _loginScreenState extends State<loginScreen> {
       final loginResponse = await http.post(
         loginUrl,
         body: json.encode({
-          'fullname': usernameController.text,
+          'name': usernameController.text,
           'password': passwordController.text,
         }),
         headers: {
@@ -46,28 +47,47 @@ class _loginScreenState extends State<loginScreen> {
       );
 
       if (loginResponse.statusCode == 200) {
-        final responseBody = json.decode(loginResponse.body);
+        // Extract JSON from the HTML comment
+        final responseBodyString =
+            loginResponse.body.replaceAll(RegExp(r'<!--|-->'), '');
+        final responseBody = json.decode(responseBodyString);
+
         if (responseBody['status'] == 'success') {
           final userData = responseBody['data'];
-
-          // Handle successful login and navigate to the desired screen
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => Dashboard()),
-          );
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Selamat Datang ${userData['fullname']}'),
-              duration: Duration(seconds: 2),
-            ),
-          );
+          await StorageUtil.saveUserData(userData);
+          // Check for role and navigate to the appropriate screen
+          if (userData['role'] == 'User') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => Dashboard()),
+            );
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Selamat Datang ${userData['fullname']}'),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Role tidak dikenali'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+          }
+          setState(() {
+            isLoading = false;
+          });
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Gagal masuk: ${responseBody['message']}'),
-              duration: Duration(seconds: 2),
+              duration: const Duration(seconds: 2),
             ),
           );
+          setState(() {
+            isLoading = false;
+          });
         }
       } else if (loginResponse.statusCode == 401) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -84,15 +104,18 @@ class _loginScreenState extends State<loginScreen> {
                 ),
               ),
             ),
-            duration: Duration(seconds: 2),
+            duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
           ),
         );
+        setState(() {
+          isLoading = false;
+        });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Gagal masuk: ${loginResponse.body}'),
-            duration: Duration(seconds: 2),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -101,48 +124,6 @@ class _loginScreenState extends State<loginScreen> {
         isLoading = false;
       });
     } catch (e) {
-      print("Error during login: $e");
-
-      // if (e is SocketException) {
-      //   ScaffoldMessenger.of(context).showSnackBar(
-      //     SnackBar(
-      //       content: SizedBox(
-      //         height: 15.h,
-      //         child: Center(
-      //           child: Text(
-      //             'Kesalahan jaringan, Periksa koneksi internet Anda.',
-      //             textAlign: TextAlign.center,
-      //             style: TextStyle(
-      //               fontSize: 13.sp,
-      //             ),
-      //           ),
-      //         ),
-      //       ),
-      //       duration: Duration(seconds: 2),
-      //       behavior: SnackBarBehavior.floating,
-      //     ),
-      //   );
-      // } else if (e is TimeoutException) {
-      //   ScaffoldMessenger.of(context).showSnackBar(
-      //     SnackBar(
-      //       content: SizedBox(
-      //         height: 15.h,
-      //         child: Center(
-      //           child: Text(
-      //             'Gagal Menghubungkan ke server. Silakan coba lagi.',
-      //             textAlign: TextAlign.center,
-      //             style: TextStyle(
-      //               fontSize: 13.sp,
-      //             ),
-      //           ),
-      //         ),
-      //       ),
-      //       duration: Duration(seconds: 2),
-      //       behavior: SnackBarBehavior.floating,
-      //     ),
-      //   );
-      // }
-
       setState(() {
         isLoading = false;
       });
@@ -281,7 +262,7 @@ class _loginScreenState extends State<loginScreen> {
                                                         passwordController
                                                             .text.isEmpty) {
                                                       setState(() {
-                                                        isLoading = true;
+                                                        isLoading = false;
                                                       });
                                                       return;
                                                     }

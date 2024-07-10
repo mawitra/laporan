@@ -1,3 +1,7 @@
+// ignore_for_file: use_build_context_synchronously
+
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:laporan_masyarakat/config.dart';
@@ -22,6 +26,101 @@ class _RegScreenState extends State<RegScreen> {
     super.initState();
   }
 
+  Future<void> register() async {
+    setState(() {
+      isLoading = true;
+    });
+    try {
+      final registerUrl = Uri.parse('${ApiConfig.baseUrl}/api/registers');
+
+      final registerResponse = await http.post(
+        registerUrl,
+        body: json.encode({
+          'fullname': fullnameController.text,
+          'name': usernameController.text,
+          'email': emailController.text,
+          'password': passwordController.text,
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      );
+
+      final responseBodyString =
+          registerResponse.body.replaceAll(RegExp(r'<!--|-->'), '');
+      final responseBody = json.decode(responseBodyString);
+
+      if (registerResponse.statusCode == 200 &&
+          responseBody['status'] == 'success') {
+        // Handle successful registration
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'Registration successful! Welcome ${responseBody['data']['fullname']}'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      } else {
+        // Handle registration failure with error messages
+        String errorMessage = '';
+        if (responseBody['errors'] != null) {
+          responseBody['errors'].forEach((key, value) {
+            errorMessage += '${value.join(', ')}\n';
+          });
+        }
+        String message = responseBody['message'] ?? 'Registration failed';
+
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.cancel, color: Colors.orange, size: 35.sp),
+                SizedBox(height: 8.w),
+                Text(
+                  message,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            content: Text(
+              errorMessage,
+              style: TextStyle(
+                color: Colors.black87,
+                fontWeight: FontWeight.bold,
+                fontSize: 15.sp,
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: Text(
+                  'Oke',
+                  style: TextStyle(
+                    color: AppColor.primaryColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+
+      setState(() {
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -38,7 +137,7 @@ class _RegScreenState extends State<RegScreen> {
                     child: Image(
                       width: 150.w,
                       height: 150.w,
-                      image: AssetImage(
+                      image: const AssetImage(
                         'assets/Lapor.png',
                       ),
                     ),
@@ -176,12 +275,12 @@ class _RegScreenState extends State<RegScreen> {
                                                         passwordController
                                                             .text.isEmpty) {
                                                       setState(() {
-                                                        isLoading = true;
+                                                        isLoading = false;
                                                       });
                                                       return;
                                                     }
 
-                                                    // handleLogin();
+                                                    register();
                                                   },
                                             child: isLoading
                                                 ? SizedBox(

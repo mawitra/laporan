@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:laporan_masyarakat/WelcomeScreen.dart';
+import 'package:laporan_masyarakat/dashboard/User/dashboard.dart';
+import 'package:laporan_masyarakat/loginScreen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -21,7 +23,7 @@ class MyApp extends StatelessWidget {
               fontFamily: ('inter'),
               useMaterial3: true,
             ),
-            home: const WelcomeScreen(),
+            home: loginScreen(),
           );
         });
   }
